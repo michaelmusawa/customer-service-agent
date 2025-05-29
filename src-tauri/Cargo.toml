@@ -10,9 +10,7 @@ rust-version = "1.77.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-name = "app_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+
 
 [build-dependencies]
 tauri-build = { version = "2.2.0", features = [] }
@@ -23,3 +21,14 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.5.0", features = [] }
 tauri-plugin-log = "2.0.0-rc"
+tauri-plugin-store = "2"
+
+# for watching the filesystem
+notify = "8.0"
+
+# to find $HOME in a cross-platform way
+directories = "6.0"
+tauri-plugin-fs = { version = "2.0.0", features = ["watch"] }
+
+pdf-extract = "0.6"
+

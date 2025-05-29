@@ -34,8 +34,9 @@
       "icons/icon.ico"
     ]
   },
-
   "plugins": {
-    "store": { "active": true }
+    "fs": {
+      "requireLiteralLeadingDot": false
+    }
   }
 }

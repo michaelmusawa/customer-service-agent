@@ -1,4 +1,4 @@
-// src/fieldExtractor.ts
+// app/lib/fieldExtractor.ts
 export function extractFields(text: string) {
   const customerMatch = text.match(/Customer\s*Name:\s*(.+)/i);
   const addressMatch = text.match(/Address:\s*(.+)/i);

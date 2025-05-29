@@ -2,37 +2,42 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { get, set } from "@tauri-apps/plugin-store";
+import { saveApiKey, loadApiKey } from "./lib/tauriApi";
+import { startInvoiceWatcher } from "./lib/invoiceWatcher";
+import { startWatcher } from "./lib/watchInvoices";
 
 export default function HomePage() {
-  const [apiKey, setApiKey] = useState<string>("");
+  const [apiKey, setApiKeyState] = useState<string>("");
   const [status, setStatus] = useState<"idle" | "loading" | "saved" | "error">(
     "idle"
   );
 
-  // load the saved key on first render
   useEffect(() => {
-    async function loadKey() {
+    startWatcher().catch((e) => {
+      console.error("Failed to start invoice watcher:", e);
+    });
+  }, []);
+
+  useEffect(() => {
+    async function fetchKey() {
       setStatus("loading");
       try {
-        const stored = await get<string>("agentApiKey");
-        if (stored) setApiKey(stored);
+        const stored = await loadApiKey();
+        if (stored) setApiKeyState(stored);
         setStatus("idle");
       } catch (e) {
         console.error("Failed to load API key:", e);
         setStatus("error");
       }
     }
-    loadKey();
+    fetchKey();
   }, []);
 
-  // handler for clicking “Save”
   async function handleSave() {
     setStatus("loading");
     try {
-      await set("agentApiKey", apiKey);
+      await saveApiKey(apiKey);
       setStatus("saved");
-      // clear “saved” after a moment
       setTimeout(() => setStatus("idle"), 1500);
     } catch (e) {
       console.error("Failed to save API key:", e);
@@ -41,48 +46,47 @@ export default function HomePage() {
   }
 
   return (
-    <main
-      style={{ maxWidth: 480, margin: "2rem auto", fontFamily: "sans-serif" }}
-    >
-      <h1>Agent Settings</h1>
+    <main className="max-w-md mx-auto mt-12 px-4">
+      <h1 className="text-2xl font-semibold">Agent Settings</h1>
 
-      <label htmlFor="apiKey" style={{ display: "block", marginTop: "1rem" }}>
+      <label
+        htmlFor="apiKey"
+        className="block mt-6 text-sm font-medium text-gray-700"
+      >
         Agent API Key
       </label>
       <input
         id="apiKey"
         type="text"
         value={apiKey}
-        onChange={(e) => setApiKey(e.currentTarget.value)}
+        onChange={(e) => setApiKeyState(e.currentTarget.value)}
         placeholder="Paste your Next.js agent key here"
-        style={{
-          width: "100%",
-          padding: "0.5rem",
-          marginTop: "0.5rem",
-          fontSize: "1rem",
-        }}
+        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-200"
       />
 
       <button
         onClick={handleSave}
         disabled={status === "loading"}
-        style={{
-          marginTop: "1rem",
-          padding: "0.6rem 1.2rem",
-          fontSize: "1rem",
-          cursor: status === "loading" ? "not-allowed" : "pointer",
-        }}
+        className={`
+          mt-6 w-full flex justify-center items-center
+          px-4 py-2 text-white font-medium rounded-md
+          ${
+            status === "loading"
+              ? "bg-blue-300 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }
+        `}
       >
         {status === "loading" ? "Saving…" : "Save"}
       </button>
 
       {status === "saved" && (
-        <p style={{ color: "green", marginTop: "0.75rem" }}>
+        <p className="mt-4 text-green-600 flex items-center">
           ✅ API Key saved!
         </p>
       )}
       {status === "error" && (
-        <p style={{ color: "red", marginTop: "0.75rem" }}>
+        <p className="mt-4 text-red-600 flex items-center">
           ❌ Something went wrong. Check console.
         </p>
       )}
