@@ -11,6 +11,14 @@
     },
 
     {
+      "identifier": "fs:allow-download-write-recursive"
+    },
+
+    {
+      "identifier": "fs:allow-rename"
+    },
+
+    {
       "identifier": "fs:allow-watch",
       "allow": [{ "path": "~/Downloads/invoices/**/*" }]
     }
