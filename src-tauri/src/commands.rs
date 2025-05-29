@@ -33,14 +33,8 @@ pub async fn load_api_key(app: AppHandle<Wry>) -> Result<String, String> {
 
 #[command]
 pub fn parse_invoice(file_path: String) -> Result<String, String> {
-    match fs::read(file_path.clone()) {
-        Ok(bytes) => {
-            match extract_text(&bytes) {
-                Ok(text) => Ok(text),
-                Err(err) => Err(format!("Failed to extract text: {}", err)),
-            }
-        }
-        Err(err) => Err(format!("Failed to read file: {}", err)),
-    }
+  extract_text(&file_path)
+  .map_err(|e| format!("Failed to extract text from `{}`: {}", file_path, e))
+    
 }
 

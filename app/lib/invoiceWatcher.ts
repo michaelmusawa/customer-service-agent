@@ -12,10 +12,12 @@ export async function startInvoiceWatcher() {
           invoke("parse_and_send", { path: p }).catch(console.error);
         }
       }
+
+      console.log("invoices directory event", event);
     },
     {
       baseDir: BaseDirectory.Download,
-      recursive: false, // set true if you need subfolders
+      recursive: false,
     }
   );
 }

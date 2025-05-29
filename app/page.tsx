@@ -13,9 +13,15 @@ export default function HomePage() {
   );
 
   useEffect(() => {
-    startWatcher().catch((e) => {
-      console.error("Failed to start invoice watcher:", e);
-    });
+    async function initWatcher() {
+      try {
+        await startInvoiceWatcher();
+        console.log("✅ Invoice watcher started");
+      } catch (e) {
+        console.error("🚨 startInvoiceWatcher threw:", e);
+      }
+    }
+    initWatcher();
   }, []);
 
   useEffect(() => {

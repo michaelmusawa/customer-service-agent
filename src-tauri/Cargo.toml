@@ -23,8 +23,6 @@ tauri = { version = "2.5.0", features = [] }
 tauri-plugin-log = "2.0.0-rc"
 tauri-plugin-store = "2"
 
-# for watching the filesystem
-notify = "8.0"
 
 # to find $HOME in a cross-platform way
 directories = "6.0"

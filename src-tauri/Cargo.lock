@@ -105,7 +105,6 @@ version = "0.1.0"
 dependencies = [
  "directories",
  "log",
- "notify",
  "pdf-extract",
  "serde",
  "serde_json",
