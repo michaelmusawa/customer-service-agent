@@ -1,4 +1,4 @@
-// src-tauri/src/lib.rs
+// src-tauri/src/commands.rs
 use tauri::{AppHandle, Wry};
 use serde_json::json;
 use tauri_plugin_store::StoreExt;

@@ -4,7 +4,6 @@
 import React, { useEffect, useState } from "react";
 import { saveApiKey, loadApiKey } from "./lib/tauriApi";
 import { startInvoiceWatcher } from "./lib/invoiceWatcher";
-import { startWatcher } from "./lib/watchInvoices";
 
 export default function HomePage() {
   const [apiKey, setApiKeyState] = useState<string>("");
