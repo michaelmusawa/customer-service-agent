@@ -29,4 +29,7 @@ directories = "6.0"
 tauri-plugin-fs = { version = "2.0.0", features = ["watch"] }
 
 pdf-extract = "0.6"
+tauri-plugin-notification = "2"
+
+
 

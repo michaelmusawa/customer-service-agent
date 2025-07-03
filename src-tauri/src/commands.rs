@@ -3,7 +3,7 @@ use tauri::{AppHandle, Wry};
 use serde_json::json;
 use tauri_plugin_store::StoreExt;
 
-use std::fs;
+
 use pdf_extract::extract_text;
 use tauri::command;
 
@@ -11,13 +11,12 @@ use tauri::command;
 #[tauri::command]
 pub async fn save_api_key(app: AppHandle<Wry>, key: String) -> Result<(), String> {
   let store = app.store("store.json").map_err(|e| e.to_string())?;
-  store.set("agentApiKey", json!(key));
+  store.set("agentApiKey", json!(key)); // key should be: "email::key"
   store.save().map_err(|e| e.to_string())?;
   store.close_resource();
   Ok(())
 }
 
-/// Load the API key from `store.json`, defaulting to `""`
 #[tauri::command]
 pub async fn load_api_key(app: AppHandle<Wry>) -> Result<String, String> {
   let store = app.store("store.json").map_err(|e| e.to_string())?;
@@ -33,8 +32,14 @@ pub async fn load_api_key(app: AppHandle<Wry>) -> Result<String, String> {
 
 #[command]
 pub fn parse_invoice(file_path: String) -> Result<String, String> {
-  extract_text(&file_path)
-  .map_err(|e| format!("Failed to extract text from `{}`: {}", file_path, e))
+  let metadata = std::fs::metadata(&file_path)
+    .map_err(|e| format!("Failed to get file metadata: {}", e))?;
     
+  if metadata.len() > 10 * 1024 * 1024 { // 10MB limit
+    return Err("File too large (max 10MB)".into());
+  }
+
+  extract_text(&file_path)
+    .map_err(|e| format!("Failed to extract text: {}", e))
 }
 

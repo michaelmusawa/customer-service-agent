@@ -1,73 +1,100 @@
 import { invoke } from "@tauri-apps/api/core";
-import { watch, BaseDirectory, rename, mkdir } from "@tauri-apps/plugin-fs";
+import { watch, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
+
 import { extractFields } from "./fieldExtractor";
 import { sendToNext } from "./actions/sendToNext";
+import { basename } from "./pathUtils";
+import { renamePath, validate } from "./utils";
+import { extractExcelFields, parseExcel } from "./excelUtils";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 
-export async function startInvoiceWatcher() {
-  // Ensure processed directory exists
-  const processedDir = "invoices/processed";
-  try {
-    await mkdir(processedDir, {
-      baseDir: BaseDirectory.Download,
-      recursive: true,
-    });
-  } catch (err) {
-    console.log("ℹ️ Processed directory already exists", err);
+export type ProcessingEvent = {
+  fileName: string;
+  fullPath?: string;
+  status: "started" | "success" | "error";
+  timestamp: number;
+  error?: string;
+};
+
+export async function startInvoiceWatcher(
+  onEvent?: (event: ProcessingEvent) => void
+) {
+  // Ensure directories exist
+  const directories = ["invoices", "invoices/processed", "invoices/failed"];
+  for (const dir of directories) {
+    try {
+      await mkdir(dir, {
+        baseDir: BaseDirectory.Download,
+        recursive: true,
+      });
+    } catch {
+      // already exists
+    }
   }
 
   await watch(
     "invoices",
     async (event) => {
-      console.log("👀 FS Event:", event);
+      // only care about new files
+      // @ts-expect-error: we know `event.type.create` exists at runtime
+      if (!event.type?.create || event.type.create.kind !== "file") return;
 
-      // Filter only relevant create events
-      if (
-        !event.type?.create ||
-        event.type.create.kind !== "file" ||
-        !event.paths.some((p) => p.endsWith(".pdf"))
-      ) {
-        return;
-      }
+      for (const p of event.paths.filter(
+        (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
+      )) {
+        const fileName = basename(p);
+        onEvent?.({
+          fileName,
+          fullPath: p,
+          status: "started",
+          timestamp: Date.now(),
+        });
 
-      for (const p of event.paths.filter((p) => p.endsWith(".pdf"))) {
         try {
-          console.log("🔍 Processing new invoice:", p);
+          if (p.endsWith(".pdf")) {
+            // === existing PDF flow ===
+            const text: string = await invoke("parse_invoice", { filePath: p });
+            const fields = extractFields(text);
+            validate(fields);
+            await sendToNext(fields);
+          } else {
+            // === new XLSX flow ===
+            const rows = await parseExcel(p);
+            for (const row of rows) {
+              const fields = extractExcelFields(row);
+              validate(fields);
+              await sendToNext(fields);
+            }
+          }
 
-          const text: string = await invoke("parse_invoice", { filePath: p });
-          const fields = extractFields(text);
-          const payload = { ...fields };
-
-          await sendToNext(payload);
-          console.log("✅ Sent invoice", payload);
-
-          // Create destination path
-          const newPath = p.replace("/invoices/", "/invoices/processed/");
-
-          // Ensure the directory exists before moving
-          await mkdir(newPath.substring(0, newPath.lastIndexOf("/")), {
-            baseDir: BaseDirectory.Download,
-            recursive: true,
+          onEvent?.({
+            fileName,
+            fullPath: p,
+            status: "success",
+            timestamp: Date.now(),
           });
-
-          await rename(p, newPath, {
-            oldPathBaseDir: BaseDirectory.Download,
-            newPathBaseDir: BaseDirectory.Download,
-          });
-
-          console.log(`📦 Moved to: ${newPath}`);
+          await renamePath(p, "/invoices/processed/");
         } catch (err) {
-          console.error("❌ Processing failed", p, err);
-
-          // Add error handling for file already moved
-          if (err.message.includes("No such file or directory")) {
-            console.warn("⚠️ File was already moved or deleted");
+          sendNotification({
+            title: "Daemon",
+            body: "❌ Unknown Error occurred",
+          });
+          const errorMsg = err instanceof Error ? err.message : "Unknown error";
+          onEvent?.({
+            fileName,
+            fullPath: p,
+            status: "error",
+            error: errorMsg,
+            timestamp: Date.now(),
+          });
+          try {
+            await renamePath(p, "/invoices/failed/");
+          } catch {
+            console.error("Failed moving to failed directory");
           }
         }
       }
     },
-    {
-      baseDir: BaseDirectory.Download,
-      recursive: true,
-    }
+    { baseDir: BaseDirectory.Download, recursive: true }
   );
 }
