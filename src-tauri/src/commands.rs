@@ -28,6 +28,28 @@ pub async fn load_api_key(app: AppHandle<Wry>) -> Result<String, String> {
   Ok(value)
 }
 
+/// Save the API base URL under “apiBaseUrl” in `store.json`
+#[tauri::command]
+pub async fn save_api_base_url(app: AppHandle<Wry>, url: String) -> Result<(), String> {
+  let store = app.store("store.json").map_err(|e| e.to_string())?;
+  store.set("apiBaseUrl", json!(url));
+  store.save().map_err(|e| e.to_string())?;
+  store.close_resource();
+  Ok(())
+}
+
+/// Load the API base URL (or empty if not present)
+#[tauri::command]
+pub async fn load_api_base_url(app: AppHandle<Wry>) -> Result<String, String> {
+  let store = app.store("store.json").map_err(|e| e.to_string())?;
+  let value = store
+    .get("apiBaseUrl")
+    .and_then(|v| v.as_str().map(str::to_string))
+    .unwrap_or_default();
+  store.close_resource();
+  Ok(value)
+}
+
 
 
 #[command]

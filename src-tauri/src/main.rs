@@ -6,7 +6,7 @@ use tauri_plugin_store::{Builder as StorePluginBuilder};
 
 // Bring your commands into scope from the renamed module
 mod commands;
-use commands::{save_api_key, load_api_key, parse_invoice}; 
+use commands::{save_api_key, load_api_key, save_api_base_url, load_api_base_url, parse_invoice}; 
 
 fn main() {
     Builder::default()
@@ -23,7 +23,7 @@ fn main() {
     
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![save_api_key, load_api_key, parse_invoice])
+        .invoke_handler(tauri::generate_handler![save_api_key, load_api_key, save_api_base_url, load_api_base_url, parse_invoice])
         .plugin(tauri_plugin_fs::init())
         .run(generate_context!())
         .expect("error while running tauri application");

@@ -3,6 +3,7 @@ import axios from "axios";
 import { loadApiKey } from "../tauriApi";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { ExtractedFields } from "../fieldExtractor";
+import { loadApiBaseUrl } from "../settings";
 
 export async function sendToNext(payload: ExtractedFields) {
   console.log("🚀 Sending payload to Next.js API:", payload);
@@ -17,7 +18,11 @@ export async function sendToNext(payload: ExtractedFields) {
     throw new Error("No API key configured");
   }
 
-  const endpoint = "http://localhost:3001/api/records";
+  const base = await loadApiBaseUrl();
+  // strip any trailing slash, then append
+  const endpoint = `${base.replace(/\/$/, "")}/api/records`;
+
+  console.log("🚀 Sending to endpoint:", endpoint);
 
   try {
     const response = await axios.post(endpoint, payload, {
