@@ -6,9 +6,7 @@ import { ExtractedFields } from "../fieldExtractor";
 import { loadApiBaseUrl } from "../settings";
 
 export async function sendToNext(payload: ExtractedFields) {
-  console.log("🚀 Sending payload to Next.js API:", payload);
   const apiKey = await loadApiKey();
-  console.log("🚀 Loaded API key:", apiKey);
 
   if (!apiKey) {
     sendNotification({
@@ -21,8 +19,6 @@ export async function sendToNext(payload: ExtractedFields) {
   const base = await loadApiBaseUrl();
   // strip any trailing slash, then append
   const endpoint = `${base.replace(/\/$/, "")}/api/records`;
-
-  console.log("🚀 Sending to endpoint:", endpoint);
 
   try {
     const response = await axios.post(endpoint, payload, {

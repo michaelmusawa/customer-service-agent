@@ -190,7 +190,7 @@ export default function HomePage() {
               <div className="space-y-5">
                 {/* Base URL Field */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                     <FiLink className="text-gray-500" />
                     <span>Base URL</span>
                   </label>
