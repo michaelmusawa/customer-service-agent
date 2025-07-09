@@ -1,5 +1,6 @@
 import { BaseDirectory, rename } from "@tauri-apps/plugin-fs";
 import { ExtractedFields } from "./fieldExtractor";
+import { basename } from "./pathUtils";
 
 // === helper: validate required fields ===
 
@@ -23,10 +24,28 @@ export function validate(fields: ExtractedFields) {
 }
 
 // === helper: move file into a subfolder ===
+
+/**
+ * Move a file under Downloads from one sub‑folder into another.
+ *
+ * @param oldRel       e.g. "invoices/foo.pdf"
+ * @param targetFolder e.g. "invoices/failed"
+ */
 export async function renamePath(oldRel: string, targetFolder: string) {
-  const newRel = oldRel.replace("/invoices/", targetFolder);
-  await rename(oldRel, newRel, {
-    oldPathBaseDir: BaseDirectory.Download,
-    newPathBaseDir: BaseDirectory.Download,
-  });
+  // 1) Extract the filename ("foo.pdf")...
+  const fileName = basename(oldRel);
+
+  // 2) Build the new relative path ("invoices/failed/foo.pdf")
+  const newRel = `${targetFolder}/${fileName}`;
+
+  // 3) Call the plugin exactly as documented:
+  //    rename(oldPath, newPath, { oldPathBaseDir, newPathBaseDir })
+  await rename(
+    oldRel,
+    newRel,
+    {
+      oldPathBaseDir: BaseDirectory.Download,
+      newPathBaseDir: BaseDirectory.Download,
+    }
+  );
 }

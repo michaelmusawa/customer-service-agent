@@ -39,7 +39,11 @@ export async function startInvoiceWatcher(
     async (event) => {
       // only care about new files
       // @ts-expect-error: we know `event.type.create` exists at runtime
-      if (!event.type?.create || event.type.create.kind !== "file") return;
+      const isNewFile =(event.type?.modify?.kind  === "any");
+
+      // if (!event.type?.create || event.type.create.kind !== "file") return;
+      if (!isNewFile) return;
+
 
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
@@ -83,7 +87,17 @@ export async function startInvoiceWatcher(
             status: "success",
             timestamp: Date.now(),
           });
-          await renamePath(p, "/invoices/processed/");
+
+          try {
+            // … after success …
+await renamePath(p, "invoices/processed");
+          } catch {
+            console.error("Failed moving to processed directory");
+          }
+        
+      
+
+
         } catch (err) {
           sendNotification({
             title: "Daemon",
@@ -98,8 +112,10 @@ export async function startInvoiceWatcher(
             timestamp: Date.now(),
           });
           try {
-            await renamePath(p, "/invoices/failed/");
-          } catch {
+            // … on error …
+await renamePath(p, "invoices/failed")
+          } catch (err) {
+            console.log(err)
             console.error("Failed moving to failed directory");
           }
         }
