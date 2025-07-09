@@ -19,6 +19,8 @@ export type ProcessingEvent = {
 export async function startInvoiceWatcher(
   onEvent?: (event: ProcessingEvent) => void
 ) {
+  const seen = new Set<string>();
+
   // Ensure directories exist
   const directories = ["invoices", "invoices/processed", "invoices/failed"];
   for (const dir of directories) {
@@ -42,6 +44,14 @@ export async function startInvoiceWatcher(
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
       )) {
+        // If we’ve already processed this exact path, skip it
+        if (seen.has(p)) {
+          console.debug(`Skipping already-processed file: ${p}`);
+          continue;
+        }
+        // Mark it seen immediately so you don’t get duplicates while processing
+        seen.add(p);
+
         const fileName = basename(p);
         onEvent?.({
           fileName,

@@ -21,14 +21,14 @@ export async function parseExcel(relPath: string): Promise<ExcelRow[]> {
 interface ExcelRow {
   "Customer Name"?: string;
   "Invoice No"?: string;
-  Amount: string;
+  "Total Amount": string;
   "House/Stall No."?: string;
 }
 
 export function extractExcelFields(row: ExcelRow) {
   const name = row["Customer Name"]?.toString().trim();
   const recordNumber = row["Invoice No"]?.toString().trim();
-  const value = parseFloat(row["Amount"]) || 0;
+  const value = parseFloat(row["Total Amount"]) || 0;
   const houseStall = row["House/Stall No."]?.toString().toLowerCase() || "";
 
   return {
