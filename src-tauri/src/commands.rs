@@ -51,7 +51,6 @@ pub async fn load_api_base_url(app: AppHandle<Wry>) -> Result<String, String> {
 }
 
 
-
 #[command]
 pub fn parse_invoice(file_path: String) -> Result<String, String> {
   let metadata = std::fs::metadata(&file_path)

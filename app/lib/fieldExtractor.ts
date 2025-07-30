@@ -10,13 +10,14 @@ export interface ExtractedFields {
   service: string | null;
   subservice: string | null;
   value: string | number | null;
+  date?: string | null; // Added date field
 }
 
 export function extractFields(rawText: string): ExtractedFields {
   // collapse whitespace into single spaces (but KEEP case, since invoice numbers are case-sensitive)
   const normalized = rawText.replace(/\s+/g, " ").trim();
 
-  // 1) Customer Name: only match "Customer Name:" or "Client Name:", stop at next invoice/bill marker
+  // 1) Customer Name
   const customerMatch = normalized.match(
     /(?:client|name)[\s:]+(.+?)(?=\s+(?:invoice|bill|application)[\s:]|$)/i
   );
@@ -31,16 +32,19 @@ export function extractFields(rawText: string): ExtractedFields {
     /(?:total|amount due|balance|grand total|bill total amount)[\s:]*\$?([\d,]+\.\d{2})\b/i
   );
 
-  // 4) Subservice / Service
+  // 4) Date & Time
+  const dateTimeMatch = normalized.match(
+    /date[\s&]*time[\s:]*([\d\/]+\s+\d{1,2}:\d{2}\s*(?:AM|PM))/i
+  );
+
+  // 5) Subservice / Service
   let foundSub: string | null = null;
   let foundSvc: string | null = null;
-
   const lower = normalized.toLowerCase();
 
   // special case: "land rate for" → Annual Land rates
   if (lower.includes("land rate for")) {
     foundSub = "Annual Land rates";
-    // find its parent service in your Services array
     const svc = Services.find((s) =>
       s.subServices.some((ss) => ss.toLowerCase() === foundSub!.toLowerCase())
     );
@@ -60,21 +64,23 @@ export function extractFields(rawText: string): ExtractedFields {
     }
   }
 
-  // console.log("Extracted fields:", {
-  //   customerName: customerMatch?.[1]?.trim() ?? null,
-  //   invoiceNumber: invoiceMatch?.[1]?.trim() ?? null,
-  //   amount: amountMatch?.[1]?.trim() ?? null,
-  //   service: foundSvc,
-  //   subservice: foundSub,
-  // });
+  console.log("Extracted fields:", {
+    customerName: customerMatch?.[1]?.trim() ?? null,
+    invoiceNumber: invoiceMatch?.[1]?.trim() ?? null,
+    amount: amountMatch?.[1]?.trim() ?? null,
+    service: foundSvc,
+    subservice: foundSub,
+    date: dateTimeMatch?.[1]?.trim() ?? null,
+  });
 
   return {
-    ticket: "T-DAEMON", // static ticket for now
+    ticket: "T-DAEMON",
     recordType: "invoice",
     name: customerMatch?.[1]?.trim() ?? null,
     recordNumber: invoiceMatch?.[1]?.trim() ?? null,
     service: foundSvc,
     subservice: foundSub,
     value: amountMatch?.[1]?.trim() ?? null,
+    date: dateTimeMatch?.[1]?.trim() ?? null, // return captured date/time
   };
 }

@@ -39,11 +39,11 @@ export async function startInvoiceWatcher(
     async (event) => {
       // only care about new files
       // @ts-expect-error: we know `event.type.create` exists at runtime
-      const isNewFile =(event.type?.modify?.kind  === "any");
+      const isNewFile = event.type?.modify?.kind === "any";
 
-      // if (!event.type?.create || event.type.create.kind !== "file") return;
+      // const isNewFile = event.type?.create || event.type.create.kind === "file";
+
       if (!isNewFile) return;
-
 
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
@@ -51,6 +51,10 @@ export async function startInvoiceWatcher(
         // If we’ve already processed this exact path, skip it
         if (seen.has(p)) {
           console.debug(`Skipping already-processed file: ${p}`);
+          sendNotification({
+            title: "Daemon",
+            body: ` ⚠️ '${basename(p)}' was already processed.`,
+          });
           continue;
         }
         // Mark it seen immediately so you don’t get duplicates while processing
@@ -90,14 +94,10 @@ export async function startInvoiceWatcher(
 
           try {
             // … after success …
-await renamePath(p, "invoices/processed");
+            await renamePath(p, "invoices/processed");
           } catch {
             console.error("Failed moving to processed directory");
           }
-        
-      
-
-
         } catch (err) {
           sendNotification({
             title: "Daemon",
@@ -113,9 +113,9 @@ await renamePath(p, "invoices/processed");
           });
           try {
             // … on error …
-await renamePath(p, "invoices/failed")
+            await renamePath(p, "invoices/failed");
           } catch (err) {
-            console.log(err)
+            console.log(err);
             console.error("Failed moving to failed directory");
           }
         }

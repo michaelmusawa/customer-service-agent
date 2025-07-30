@@ -40,12 +40,8 @@ export async function renamePath(oldRel: string, targetFolder: string) {
 
   // 3) Call the plugin exactly as documented:
   //    rename(oldPath, newPath, { oldPathBaseDir, newPathBaseDir })
-  await rename(
-    oldRel,
-    newRel,
-    {
-      oldPathBaseDir: BaseDirectory.Download,
-      newPathBaseDir: BaseDirectory.Download,
-    }
-  );
+  await rename(oldRel, newRel, {
+    oldPathBaseDir: BaseDirectory.Download,
+    newPathBaseDir: BaseDirectory.Download,
+  });
 }
