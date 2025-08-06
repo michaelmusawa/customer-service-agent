@@ -35,12 +35,23 @@ export async function renamePath(oldRel: string, targetFolder: string) {
   // 1) Extract the filename ("foo.pdf")...
   const fileName = basename(oldRel);
 
-  // 2) Build the new relative path ("invoices/failed/foo.pdf")
-  const newRel = `${targetFolder}/${fileName}`;
+  let sourceRel: string;
+  let destRel: string;
+
+  if (
+    !targetFolder.includes("/processed") &&
+    !targetFolder.includes("/failed")
+  ) {
+    sourceRel = `invoices/failed/${fileName}`;
+    destRel = `invoices/${fileName}`;
+  } else {
+    sourceRel = oldRel;
+    destRel = `${targetFolder}/${fileName}`;
+  }
 
   // 3) Call the plugin exactly as documented:
   //    rename(oldPath, newPath, { oldPathBaseDir, newPathBaseDir })
-  await rename(oldRel, newRel, {
+  await rename(sourceRel, destRel, {
     oldPathBaseDir: BaseDirectory.Download,
     newPathBaseDir: BaseDirectory.Download,
   });

@@ -16,11 +16,11 @@ export type ProcessingEvent = {
   error?: string;
 };
 
+export const seen = new Set<string>();
+
 export async function startInvoiceWatcher(
   onEvent?: (event: ProcessingEvent) => void
 ) {
-  const seen = new Set<string>();
-
   // Ensure directories exist
   const directories = ["invoices", "invoices/processed", "invoices/failed"];
   for (const dir of directories) {
@@ -41,9 +41,16 @@ export async function startInvoiceWatcher(
       // @ts-expect-error: we know `event.type.create` exists at runtime
       const isNewFile = event.type?.modify?.kind === "any";
 
-      // const isNewFile = event.type?.create || event.type.create.kind === "file";
-
+      // const isNewFile =
+      //   event?.type?.create ||
+      //   event?.type?.create?.kind === "file" ||
+      //   (event.paths.filter((path) => path.includes("failed")) &&
+      //     event?.type?.modify?.kind === "rename");
       if (!isNewFile) return;
+
+      console.log("Watcher event:", event);
+
+      console.log("New file detected:", event.paths);
 
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
@@ -59,6 +66,8 @@ export async function startInvoiceWatcher(
         }
         // Mark it seen immediately so you don’t get duplicates while processing
         seen.add(p);
+
+        console.log("Processing file:", p);
 
         const fileName = basename(p);
         onEvent?.({
