@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 
-import { seen, startInvoiceWatcher } from "./lib/invoiceWatcher";
+import { startInvoiceWatcher } from "./lib/invoiceWatcher";
 import { ProcessingEvent } from "./lib/invoiceWatcher";
 import {
   FiAlertTriangle,
@@ -23,7 +23,8 @@ import {
   saveApiBaseUrl,
   saveApiKey,
 } from "./lib/settings";
-import { renamePath } from "./lib/utils";
+import { processFile, renamePath } from "./lib/utils";
+import { basename } from "path";
 
 export default function HomePage() {
   const [apiKey, setApiKey] = useState("");
@@ -167,16 +168,49 @@ export default function HomePage() {
     if (!event.fullPath) return;
 
     const p = event.fullPath;
+    let failedPath;
+
+    const fileName = basename(p);
+    if (p.includes("/invoices/failed/")) {
+      failedPath = p;
+    } else {
+      failedPath = p.replace("/invoices/", "/invoices/failed/");
+    }
+
+    // 1) UI → mark as “started”
+    handleProcessingEvent({
+      fileName,
+      fullPath: failedPath,
+      status: "started",
+      timestamp: Date.now(),
+    });
 
     try {
       // 2) Remove from seenPaths so watcher will react
-      seen.delete(event.fullPath);
+
+      console.log(failedPath);
+      await processFile(failedPath);
+
+      // 3) on success → update UI
+      handleProcessingEvent({
+        fileName,
+        fullPath: failedPath,
+        status: "success",
+        timestamp: Date.now(),
+      });
 
       // 3) Move the file back into "invoices" so the watcher will pick it up
       //    `renamePath` should move under BaseDirectory.Download automatically
-      await renamePath(p, "invoices");
+      await renamePath(failedPath, "invoices/processed");
     } catch (err) {
-      console.error("Retry failed:", err);
+      const message = err instanceof Error ? err.message : String(err);
+      handleProcessingEvent({
+        fileName,
+        fullPath: failedPath,
+        status: "error",
+        error: message,
+        timestamp: Date.now(),
+      });
     }
   }
 

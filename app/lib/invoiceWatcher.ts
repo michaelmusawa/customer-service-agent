@@ -42,10 +42,8 @@ export async function startInvoiceWatcher(
       const isNewFile = event.type?.modify?.kind === "any";
 
       // const isNewFile =
-      //   event?.type?.create ||
-      //   event?.type?.create?.kind === "file" ||
-      //   (event.paths.filter((path) => path.includes("failed")) &&
-      //     event?.type?.modify?.kind === "rename");
+      //   event?.type?.create || event?.type?.create?.kind === "file";
+
       if (!isNewFile) return;
 
       console.log("Watcher event:", event);

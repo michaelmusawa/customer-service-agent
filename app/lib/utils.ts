@@ -1,6 +1,9 @@
 import { BaseDirectory, rename } from "@tauri-apps/plugin-fs";
-import { ExtractedFields } from "./fieldExtractor";
+import { ExtractedFields, extractFields } from "./fieldExtractor";
 import { basename } from "./pathUtils";
+import { invoke } from "@tauri-apps/api/core";
+import { sendToNext } from "./actions/sendToNext";
+import { extractExcelFields, parseExcel } from "./excelUtils";
 
 // === helper: validate required fields ===
 
@@ -35,19 +38,8 @@ export async function renamePath(oldRel: string, targetFolder: string) {
   // 1) Extract the filename ("foo.pdf")...
   const fileName = basename(oldRel);
 
-  let sourceRel: string;
-  let destRel: string;
-
-  if (
-    !targetFolder.includes("/processed") &&
-    !targetFolder.includes("/failed")
-  ) {
-    sourceRel = `invoices/failed/${fileName}`;
-    destRel = `invoices/${fileName}`;
-  } else {
-    sourceRel = oldRel;
-    destRel = `${targetFolder}/${fileName}`;
-  }
+  const sourceRel = oldRel;
+  const destRel = `${targetFolder}/${fileName}`;
 
   // 3) Call the plugin exactly as documented:
   //    rename(oldPath, newPath, { oldPathBaseDir, newPathBaseDir })
@@ -55,4 +47,22 @@ export async function renamePath(oldRel: string, targetFolder: string) {
     oldPathBaseDir: BaseDirectory.Download,
     newPathBaseDir: BaseDirectory.Download,
   });
+}
+
+export async function processFile(path: string): Promise<void> {
+  if (path.endsWith(".pdf")) {
+    // parse text via your Tauri command
+    const text: string = await invoke("parse_invoice", { filePath: path });
+    const data = extractFields(text);
+    validate(data);
+    await sendToNext(data);
+  } else {
+    // XLSX case, if you have it
+    const rows = await parseExcel(path);
+    for (const row of rows) {
+      const fields = extractExcelFields(row);
+      validate(fields);
+      await sendToNext(fields);
+    }
+  }
 }
