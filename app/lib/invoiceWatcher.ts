@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { watch, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 
-import { extractFields } from "./fieldExtractor";
+import { ExtractedFields, extractFields } from "./fieldExtractor";
 import { sendToNext } from "./actions/sendToNext";
 import { basename } from "./pathUtils";
 import { renamePath, validate } from "./utils";
@@ -17,6 +17,14 @@ export type ProcessingEvent = {
 };
 
 export const seen = new Set<string>();
+
+function makeRecordKey(
+  fields: Pick<ExtractedFields, "recordNumber" | "value" | "name">
+) {
+  return `${fields.recordNumber ?? ""}|${fields.value ?? ""}|${
+    fields.name ?? ""
+  }`;
+}
 
 export async function startInvoiceWatcher(
   onEvent?: (event: ProcessingEvent) => void
@@ -46,27 +54,9 @@ export async function startInvoiceWatcher(
 
       if (!isNewFile) return;
 
-      console.log("Watcher event:", event);
-
-      console.log("New file detected:", event.paths);
-
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
       )) {
-        // If we’ve already processed this exact path, skip it
-        if (seen.has(p)) {
-          console.debug(`Skipping already-processed file: ${p}`);
-          sendNotification({
-            title: "Daemon",
-            body: ` ⚠️ '${basename(p)}' was already processed.`,
-          });
-          continue;
-        }
-        // Mark it seen immediately so you don’t get duplicates while processing
-        seen.add(p);
-
-        console.log("Processing file:", p);
-
         const fileName = basename(p);
         onEvent?.({
           fileName,
@@ -80,15 +70,42 @@ export async function startInvoiceWatcher(
             // === existing PDF flow ===
             const text: string = await invoke("parse_invoice", { filePath: p });
             const fields = extractFields(text);
+
+            const recordKey = makeRecordKey(fields);
+            if (seen.has(recordKey)) {
+              console.debug(`Skipping already-processed record: ${recordKey}`);
+              sendNotification({
+                title: "Daemon",
+                body: `⚠️ '${basename(p)}' was already processed.`,
+              });
+              continue;
+            }
+
             validate(fields);
+
             await sendToNext(fields);
+            seen.add(recordKey);
           } else {
             // === new XLSX flow ===
             const rows = await parseExcel(p);
             for (const row of rows) {
               const fields = extractExcelFields(row);
+
+              const recordKey = makeRecordKey(fields);
+              if (seen.has(recordKey)) {
+                console.debug(
+                  `Skipping already-processed record: ${recordKey}`
+                );
+                sendNotification({
+                  title: "Daemon",
+                  body: `⚠️ '${basename(p)}' was already processed.`,
+                });
+                continue;
+              }
+
               validate(fields);
               await sendToNext(fields);
+              seen.add(recordKey);
             }
           }
 
