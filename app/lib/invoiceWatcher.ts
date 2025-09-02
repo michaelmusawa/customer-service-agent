@@ -41,7 +41,7 @@ export async function startInvoiceWatcher(
 
       // const isNewFile =
       //   event?.type?.create || event?.type?.create?.kind === "file";
-      // if (!isNewFile) return;
+      if (!isNewFile) return;
 
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
