@@ -202,8 +202,18 @@ export default function HomePage() {
       // 3) Move the file back into "invoices" so the watcher will pick it up
       //    `renamePath` should move under BaseDirectory.Download automatically
       await renamePath(failedPath, "invoices/processed");
+      // Inside retryProcessing error handler
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      let message: string;
+      if (typeof err === "object" && err && "error" in (err as any)) {
+        // Backend error object
+        message = (err as any).error;
+      } else if (err instanceof Error) {
+        message = err.message;
+      } else {
+        message = String(err);
+      }
+
       handleProcessingEvent({
         fileName,
         fullPath: failedPath,
@@ -517,6 +527,8 @@ export default function HomePage() {
                         ? "border-green-200 bg-green-50 dark:border-green-800/50 dark:bg-green-900/20"
                         : event.status === "error"
                         ? "border-red-200 bg-red-50 dark:border-red-800/50 dark:bg-red-900/20"
+                        : event.status === "skipped"
+                        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800/50 dark:bg-yellow-900/20"
                         : "border-blue-200 bg-blue-50 dark:border-blue-800/50 dark:bg-blue-900/20"
                     }`}
                   >
@@ -539,6 +551,8 @@ export default function HomePage() {
                             ? "text-green-500 dark:text-green-400"
                             : event.status === "error"
                             ? "text-red-500 dark:text-red-400"
+                            : event.status === "skipped"
+                            ? "text-yellow-500 dark:text-yellow-400"
                             : "text-blue-500 dark:text-blue-400"
                         }`}
                       >
@@ -546,6 +560,8 @@ export default function HomePage() {
                           ? "✓"
                           : event.status === "error"
                           ? "✗"
+                          : event.status === "skipped"
+                          ? "⚠"
                           : "↻"}
                       </div>
                       <div className="flex-1">
@@ -554,39 +570,35 @@ export default function HomePage() {
                             ? "Successfully processed"
                             : event.status === "error"
                             ? `Error: ${event.error || "Processing failed"}`
+                            : event.status === "skipped"
+                            ? event.error || "Document skipped (duplicate)"
                             : "Processing started..."}
                         </div>
 
                         {event.status === "error" && (
                           <div className="mt-2">
-                            {event.error ===
-                            "API request failed: Request failed with status code 404" ? (
-                              <span className="text-red-700 dark:text-red-400 text-sm font-medium">
-                                The API endpoint is not reachable. Please
-                                confirm you have saved your correct email and
-                                Api Key.
-                              </span>
-                            ) : (
-                              <>
-                                <div className="text-red-700 dark:text-red-400 text-sm font-medium">
-                                  Troubleshooting:
+                            <span className="text-red-700 dark:text-red-400 text-sm font-medium">
+                              {event.error}
+                            </span>
+
+                            {/* Fallback troubleshooting tips if backend didn’t provide a clear error */}
+                            {!event.error ||
+                              (event.error === "Processing failed" && (
+                                <div className="mt-2">
+                                  <div className="text-red-700 dark:text-red-400 text-sm font-medium">
+                                    Troubleshooting:
+                                  </div>
+                                  <ul className="text-red-600 dark:text-red-400 text-sm list-disc pl-5 mt-1 space-y-1">
+                                    <li>
+                                      Check if the PDF contains required fields
+                                    </li>
+                                    <li>
+                                      Ensure the file is a valid invoice
+                                      document
+                                    </li>
+                                  </ul>
                                 </div>
-                                <ul className="text-red-600 dark:text-red-400 text-sm list-disc pl-5 mt-1 space-y-1">
-                                  <li>
-                                    Check if the PDF contains required fields
-                                  </li>
-                                  <li>
-                                    Verify the PDF is not password protected
-                                  </li>
-                                  <li>
-                                    Ensure the file is a valid invoice document
-                                  </li>
-                                  <li>
-                                    Confirm API key has required permissions
-                                  </li>
-                                </ul>
-                              </>
-                            )}
+                              ))}
 
                             {event.fullPath && (
                               <button

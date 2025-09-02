@@ -1,30 +1,20 @@
+// app/lib/invoiceWatcher.ts
 import { invoke } from "@tauri-apps/api/core";
 import { watch, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 
-import { ExtractedFields, extractFields } from "./fieldExtractor";
-import { sendToNext } from "./actions/sendToNext";
 import { basename } from "./pathUtils";
-import { renamePath, validate } from "./utils";
-import { extractExcelFields, parseExcel } from "./excelUtils";
+import { renamePath } from "./utils";
+import { parseExcel } from "./excelUtils";
 import { sendNotification } from "@tauri-apps/plugin-notification";
+import { sendToNextRaw } from "./actions/sendToNext";
 
 export type ProcessingEvent = {
   fileName: string;
   fullPath?: string;
-  status: "started" | "success" | "error";
-  timestamp: number;
+  status: "started" | "success" | "error" | "skipped";
   error?: string;
+  timestamp: number;
 };
-
-export const seen = new Set<string>();
-
-function makeRecordKey(
-  fields: Pick<ExtractedFields, "recordNumber" | "value" | "name">
-) {
-  return `${fields.recordNumber ?? ""}|${fields.value ?? ""}|${
-    fields.name ?? ""
-  }`;
-}
 
 export async function startInvoiceWatcher(
   onEvent?: (event: ProcessingEvent) => void
@@ -51,13 +41,13 @@ export async function startInvoiceWatcher(
 
       // const isNewFile =
       //   event?.type?.create || event?.type?.create?.kind === "file";
-
-      if (!isNewFile) return;
+      // if (!isNewFile) return;
 
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
       )) {
         const fileName = basename(p);
+
         onEvent?.({
           fileName,
           fullPath: p,
@@ -66,58 +56,41 @@ export async function startInvoiceWatcher(
         });
 
         try {
+          let text;
+          let rows;
+
           if (p.endsWith(".pdf")) {
-            // === existing PDF flow ===
-            const text: string = await invoke("parse_invoice", { filePath: p });
-            const fields = extractFields(text);
-
-            const recordKey = makeRecordKey(fields);
-            if (seen.has(recordKey)) {
-              console.debug(`Skipping already-processed record: ${recordKey}`);
-              sendNotification({
-                title: "Daemon",
-                body: `⚠️ '${basename(p)}' was already processed.`,
-              });
-              continue;
-            }
-
-            validate(fields);
-
-            await sendToNext(fields);
-            seen.add(recordKey);
+            // extract raw text from PDF
+            text = await invoke("parse_invoice", { filePath: p });
           } else {
-            // === new XLSX flow ===
-            const rows = await parseExcel(p);
-            for (const row of rows) {
-              const fields = extractExcelFields(row);
-
-              const recordKey = makeRecordKey(fields);
-              if (seen.has(recordKey)) {
-                console.debug(
-                  `Skipping already-processed record: ${recordKey}`
-                );
-                sendNotification({
-                  title: "Daemon",
-                  body: `⚠️ '${basename(p)}' was already processed.`,
-                });
-                continue;
-              }
-
-              validate(fields);
-              await sendToNext(fields);
-              seen.add(recordKey);
-            }
+            // extract raw rows from Excel
+            rows = await parseExcel(p);
           }
 
-          onEvent?.({
+          const response = await sendToNextRaw({
+            type: p.endsWith(".pdf") ? "pdf" : "excel",
             fileName,
-            fullPath: p,
-            status: "success",
-            timestamp: Date.now(),
+            content: p.endsWith(".pdf") ? text : rows,
           });
 
+          if (response?.message?.includes("No new records inserted")) {
+            onEvent?.({
+              fileName,
+              fullPath: p,
+              status: "skipped",
+              error: "Duplicate record skipped",
+              timestamp: Date.now(),
+            });
+          } else {
+            onEvent?.({
+              fileName,
+              fullPath: p,
+              status: "success",
+              timestamp: Date.now(),
+            });
+          }
+
           try {
-            // … after success …
             await renamePath(p, "invoices/processed");
           } catch {
             console.error("Failed moving to processed directory");
@@ -125,7 +98,7 @@ export async function startInvoiceWatcher(
         } catch (err) {
           sendNotification({
             title: "Daemon",
-            body: "❌ Unknown Error occurred",
+            body: "❌ Failed sending to server",
           });
           const errorMsg = err instanceof Error ? err.message : "Unknown error";
           onEvent?.({
@@ -136,11 +109,9 @@ export async function startInvoiceWatcher(
             timestamp: Date.now(),
           });
           try {
-            // … on error …
             await renamePath(p, "invoices/failed");
           } catch (err) {
-            console.log(err);
-            console.error("Failed moving to failed directory");
+            console.error("Failed moving to failed directory", err);
           }
         }
       }

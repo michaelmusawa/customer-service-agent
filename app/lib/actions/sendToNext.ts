@@ -1,11 +1,16 @@
-// app/lib/actions/sendToNext.ts
+// app/lib/actions/sendToNextRaw.ts
 import axios from "axios";
 import { loadApiKey } from "../tauriApi";
 import { sendNotification } from "@tauri-apps/plugin-notification";
-import { ExtractedFields } from "../fieldExtractor";
 import { loadApiBaseUrl } from "../settings";
 
-export async function sendToNext(payload: ExtractedFields) {
+interface RawPayload {
+  type: "pdf" | "excel";
+  fileName: string;
+  content: string | unknown; // text for pdf, rows[] for excel
+}
+
+export async function sendToNextRaw(payload: RawPayload) {
   const apiKey = await loadApiKey();
 
   if (!apiKey) {
@@ -17,7 +22,6 @@ export async function sendToNext(payload: ExtractedFields) {
   }
 
   const base = await loadApiBaseUrl();
-  // strip any trailing slash, then append
   const endpoint = `${base.replace(/\/$/, "")}/api/records`;
 
   try {
@@ -26,38 +30,37 @@ export async function sendToNext(payload: ExtractedFields) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      timeout: 10000, // 10 seconds timeout
+      timeout: 10000,
     });
 
-    if (response.status !== 200) {
-      if (response.status === 401) {
-        sendNotification({
-          title: "Daemon",
-          body: "❌ Access denied. Check your Email and API Key",
-        });
-      }
+    if (
+      response.data &&
+      response.data.message?.includes("No new records inserted")
+    ) {
       sendNotification({
         title: "Invoice Agent",
-        body: "❌ Failed to process PDF. Check logs.",
+        body: `⚠️ Skipped: ${payload.fileName} (already processed)`,
       });
-      throw new Error(`API responded with status ${response.status}`);
+      return response.data;
+    } else if (response.status === 200) {
+      sendNotification({
+        title: "Invoice Agent",
+        body: "✅ File sent successfully!",
+      });
     } else {
       sendNotification({
         title: "Invoice Agent",
-        body: "✅ PDF processed successfully!",
+        body: "❌ Failed to send file",
       });
+      throw new Error(`API responded with status ${response.status}`);
     }
 
     return response.data;
   } catch (error) {
-    let errorMessage = "Network error";
-
-    if (axios.isAxiosError(error)) {
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
+    if (axios.isAxiosError(error) && error.response) {
+      // Let API response bubble up instead of custom messages
+      throw error.response.data;
     }
-
-    throw new Error(`API request failed: ${errorMessage}`);
+    throw error;
   }
 }

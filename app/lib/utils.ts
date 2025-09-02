@@ -2,8 +2,8 @@ import { BaseDirectory, rename } from "@tauri-apps/plugin-fs";
 import { ExtractedFields, extractFields } from "./fieldExtractor";
 import { basename } from "./pathUtils";
 import { invoke } from "@tauri-apps/api/core";
-import { sendToNext } from "./actions/sendToNext";
 import { extractExcelFields, parseExcel } from "./excelUtils";
+import { sendToNextRaw } from "./actions/sendToNext";
 
 // === helper: validate required fields ===
 
@@ -53,16 +53,18 @@ export async function processFile(path: string): Promise<void> {
   if (path.endsWith(".pdf")) {
     // parse text via your Tauri command
     const text: string = await invoke("parse_invoice", { filePath: path });
-    const data = extractFields(text);
-    validate(data);
-    await sendToNext(data);
+    await sendToNextRaw({
+      type: "pdf",
+      fileName: basename(path),
+      content: text,
+    });
   } else {
     // XLSX case, if you have it
     const rows = await parseExcel(path);
-    for (const row of rows) {
-      const fields = extractExcelFields(row);
-      validate(fields);
-      await sendToNext(fields);
-    }
+    await sendToNextRaw({
+      type: "excel",
+      fileName: basename(path),
+      content: rows,
+    });
   }
 }
