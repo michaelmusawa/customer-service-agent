@@ -205,9 +205,9 @@ export default function HomePage() {
       // Inside retryProcessing error handler
     } catch (err) {
       let message: string;
-      if (typeof err === "object" && err && "error" in (err as any)) {
+      if (typeof err === "object" && err && "error" in err) {
         // Backend error object
-        message = (err as any).error;
+        message = err.error as string;
       } else if (err instanceof Error) {
         message = err.message;
       } else {
