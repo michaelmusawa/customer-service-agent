@@ -1,8 +1,8 @@
 import { BaseDirectory, rename } from "@tauri-apps/plugin-fs";
-import { ExtractedFields, extractFields } from "./fieldExtractor";
+import { ExtractedFields } from "./fieldExtractor";
 import { basename } from "./pathUtils";
 import { invoke } from "@tauri-apps/api/core";
-import { extractExcelFields, parseExcel } from "./excelUtils";
+import { parseExcel } from "./excelUtils";
 import { sendToNextRaw } from "./actions/sendToNext";
 
 // === helper: validate required fields ===
