@@ -41,7 +41,7 @@ export async function startInvoiceWatcher(
 
       // const isNewFile =
       //   event?.type?.create || event?.type?.create?.kind === "file";
-      if (!isNewFile) return;
+      // if (!isNewFile) return;
 
       for (const p of event.paths.filter(
         (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
@@ -62,6 +62,8 @@ export async function startInvoiceWatcher(
           if (p.endsWith(".pdf")) {
             // extract raw text from PDF
             text = await invoke("parse_invoice", { filePath: p });
+
+            console.log("Extracted text:", text);
           } else {
             // extract raw rows from Excel
             rows = await parseExcel(p);

@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "enables the default permissions",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "fs:default",
     {
@@ -24,6 +22,7 @@
         }
       ]
     },
-    "notification:default"
+    "notification:default",
+    "http:default"
   ]
 }

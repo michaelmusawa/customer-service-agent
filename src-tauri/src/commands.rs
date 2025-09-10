@@ -3,7 +3,6 @@ use tauri::{AppHandle, Wry};
 use serde_json::json;
 use tauri_plugin_store::StoreExt;
 
-
 use pdf_extract::extract_text;
 use tauri::command;
 
@@ -51,16 +50,50 @@ pub async fn load_api_base_url(app: AppHandle<Wry>) -> Result<String, String> {
 }
 
 
-#[command]
-pub fn parse_invoice(file_path: String) -> Result<String, String> {
-  let metadata = std::fs::metadata(&file_path)
-    .map_err(|e| format!("Failed to get file metadata: {}", e))?;
+// #[command]
+// pub fn parse_invoice(file_path: String) -> Result<String, String> {
+//   let metadata = std::fs::metadata(&file_path)
+//     .map_err(|e| format!("Failed to get file metadata: {}", e))?;
     
-  if metadata.len() > 10 * 1024 * 1024 { // 10MB limit
-    return Err("File too large (max 10MB)".into());
-  }
+//   if metadata.len() > 10 * 1024 * 1024 { // 10MB limit
+//     return Err("File too large (max 10MB)".into());
+//   }
 
-  extract_text(&file_path)
-    .map_err(|e| format!("Failed to extract text: {}", e))
+//   extract_text(&file_path)
+//     .map_err(|e| format!("Failed to extract text: {}", e))
+// }
+
+
+#[command]
+pub async fn parse_invoice(file_path: String) -> Result<String, String> {
+
+
+    // 1. Try normal text extraction
+    if let Ok(text) = extract_text(&file_path) {
+        if !text.trim().is_empty() {
+            return Ok(text);
+        }
+    }
+
+    // 2. Fall back to OCR via FastAPI
+    let client = tauri_plugin_http::reqwest::Client::new();
+    let file_bytes = std::fs::read(&file_path).map_err(|e| e.to_string())?;
+
+    let res = client
+        .post("http://10.100.0.226:8000/ocr/pdf")
+        .header("Content-Type", "application/pdf")
+        .body(file_bytes)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        let text = res.text().await.map_err(|e| e.to_string())?;
+        let json: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        if let Some(text) = json.get("text").and_then(|t| t.as_str()) {
+            return Ok(text.to_string());
+        }
+    }
+
+    Err("Failed to extract text".into())
 }
-

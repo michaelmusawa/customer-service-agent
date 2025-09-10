@@ -12,6 +12,7 @@ fn main() {
     Builder::default()
         .plugin(StorePluginBuilder::default().build())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_http::init())
         .setup(|app| {
             use tauri_plugin_notification::NotificationExt;
             app.notification()
