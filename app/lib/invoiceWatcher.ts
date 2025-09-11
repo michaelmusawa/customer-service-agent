@@ -36,7 +36,7 @@ export async function startInvoiceWatcher(
     "invoices",
     async (event) => {
       // only care about new files
-      // @ts-expect-error: we know `event.type.create` exists at runtime
+      // @ts-expect-error: we know `event.type.create` exists at runtimegggg
       const isNewFile = event.type?.modify?.kind === "any";
 
       // const isNewFile =
