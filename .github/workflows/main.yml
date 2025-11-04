@@ -50,6 +50,44 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install # change this to npm, pnpm or bun depending on which one you use.
 
+      - name: Upload to Ubuntu update server
+        if: matrix.platform == 'windows-latest'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "src-tauri/target/release/bundle/nsis/*.zip,src-tauri/target/release/bundle/nsis/*.sig"
+          target: "/var/www/myapp-updates/"
+
+      - name: Generate update JSON
+        if: matrix.platform == 'windows-latest'
+        run: |
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').package.version")
+          SIG=$(cat src-tauri/target/release/bundle/nsis/*.sig)
+          echo "{
+            \"version\": \"${VERSION}\",
+            \"notes\": \"Auto release ${VERSION}\",
+            \"pub_date\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",
+            \"platforms\": {
+              \"windows-x86_64\": {
+                \"signature\": \"${SIG}\",
+                \"url\": \"https://updates.mycompany.local/myapp-setup.nsis.zip\"
+              }
+            }
+          }" > latest.json
+      - name: Upload update JSON
+        if: matrix.platform == 'windows-latest'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "latest.json"
+          target: "/var/www/myapp-updates/"
+
+
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
