@@ -32,11 +32,21 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "fs": {
       "requireLiteralLeadingDot": false
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQzQTZFNTcxNjJEODJBOUIKUldTYkt0aGljZVdtMHhpeWZpcFVPbWR0aTQwQ2NQeDR6TmN1eXRPWWhZWVBjOFluZUpGRGxQbmIK",
+      "endpoints": [
+        "http://customerserviceapp.nairobi.go.ke/updates/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
