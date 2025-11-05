@@ -33,7 +33,7 @@ jobs:
         id: get_version
         shell: pwsh
         run: |
-          $version = node -p "require('./src-tauri/tauri.conf.json').package.version"
+          $version = node -p "require('./src-tauri/tauri.conf.json').version"
           echo "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Build Tauri app for Windows
