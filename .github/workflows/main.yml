@@ -62,7 +62,7 @@ jobs:
 
   upload-to-server:
     needs: build-windows
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -85,15 +85,9 @@ jobs:
             }
           }" > latest.json
 
-      - name: Upload installers and JSON to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: |
-            *.zip,
-            *.sig,
-            *.exe,
-            latest.json
-          target: "/var/www/myapp-updates/"
+      - name: Copy installers and JSON locally
+        run: |
+          cp *.zip /var/www/myapp-updates/
+          cp *.sig /var/www/myapp-updates/
+          cp *.exe /var/www/myapp-downloads/
+          cp latest.json /var/www/myapp-updates/
