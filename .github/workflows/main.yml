@@ -62,14 +62,21 @@ jobs:
 
   upload-to-server:
     needs: build-windows
-    runs-on: self-hosted
+    runs-on: self-hosted  # or ubuntu-latest if using SCP
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: windows-build
+          path: ./artifacts
+
+      - name: Debug: list files
+        run: |
+          echo "Listing all files from artifact:"
+          ls -R ./artifacts
 
       - name: Generate update JSON
+        working-directory: ./artifacts
         run: |
           VERSION=${{ needs.build-windows.outputs.version }}
           SIG=$(cat *.sig)
@@ -80,14 +87,17 @@ jobs:
             \"platforms\": {
               \"windows-x86_64\": {
                 \"signature\": \"${SIG}\",
-                \"url\": \"http://customerserviceapp.nairobi.go.ke/myapp-updates/myapp-setup.nsis.zip\"
+                \"url\": \"http://customerserviceapp.nairobi.go.ke/myapp-updates/customer-service-daemon_${VERSION}_x64-setup.nsis.zip\"
               }
             }
           }" > latest.json
 
       - name: Copy installers and JSON locally
         run: |
-          cp *.zip /var/www/myapp-updates/
-          cp *.sig /var/www/myapp-updates/
-          cp *.exe /var/www/myapp-downloads/
-          cp latest.json /var/www/myapp-updates/
+          echo "Copying build files to /var/www..."
+          sudo mkdir -p /var/www/myapp-updates
+          sudo mkdir -p /var/www/myapp-downloads
+          cp ./artifacts/*.exe /var/www/myapp-downloads/ || echo "No .exe found"
+          cp ./artifacts/*.sig /var/www/myapp-updates/ || echo "No .sig found"
+          cp ./artifacts/*.zip /var/www/myapp-updates/ || echo "No .zip found"
+          cp ./artifacts/latest.json /var/www/myapp-updates/
