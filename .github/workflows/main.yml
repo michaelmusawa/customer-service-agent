@@ -62,7 +62,7 @@ jobs:
 
   upload-to-server:
     needs: build-windows
-    runs-on: self-hosted  # or ubuntu-latest if using SCP
+    runs-on: self-hosted # or ubuntu-latest if using SCP
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -70,7 +70,7 @@ jobs:
           name: windows-build
           path: ./artifacts
 
-      - name: Debug: list files
+      - name: list files
         run: |
           echo "Listing all files from artifact:"
           ls -R ./artifacts
