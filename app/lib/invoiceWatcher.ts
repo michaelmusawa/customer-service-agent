@@ -15,11 +15,6 @@ export type ProcessingEvent = {
   error?: string;
   timestamp: number;
 };
-type EventType = {
-  create?: { kind?: string };
-  modify?: { kind?: string };
-  remove?: { kind?: string };
-};
 
 export async function startInvoiceWatcher(
   onEvent?: (event: ProcessingEvent) => void
@@ -44,7 +39,7 @@ export async function startInvoiceWatcher(
 
       // const isNewFile = event.type?.modify?.kind === "any";
 
-      // @ts-expect-error
+      // @ts-expect-error TODO: plugin-fs types are inaccurate for 'create'
       // prettier-ignore
       const isNewFile = event?.type?.create || event?.type?.create?.kind === "file";
 
