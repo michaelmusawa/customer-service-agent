@@ -31,7 +31,10 @@ jobs:
 
       - name: Get version
         id: get_version
-        run: echo "version=$(node -p \"require('./src-tauri/tauri.conf.json').package.version\")" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+        run: |
+          $version = node -p "require('./src-tauri/tauri.conf.json').package.version"
+          echo "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Build Tauri app for Windows
         uses: tauri-apps/tauri-action@v0
