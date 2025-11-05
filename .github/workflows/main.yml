@@ -95,8 +95,6 @@ jobs:
       - name: Copy installers and JSON locally
         run: |
           echo "Copying build files to /var/www..."
-          sudo mkdir -p /var/www/myapp-updates
-          sudo mkdir -p /var/www/myapp-downloads
           cp ./artifacts/*.exe /var/www/myapp-downloads/ || echo "No .exe found"
           cp ./artifacts/*.sig /var/www/myapp-updates/ || echo "No .sig found"
           cp ./artifacts/*.zip /var/www/myapp-updates/ || echo "No .zip found"
