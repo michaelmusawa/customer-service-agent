@@ -87,7 +87,7 @@ jobs:
             \"platforms\": {
               \"windows-x86_64\": {
                 \"signature\": \"${SIG}\",
-                \"url\": \"http://customerserviceapp.nairobi.go.ke/myapp-updates/customer-service-daemon_${VERSION}_x64-setup.nsis.zip\"
+                \"url\": \"http://customerserviceapp.nairobi.go.ke/downloads/customer-service-daemon_${VERSION}_x64-setup.exe\"
               }
             }
           }" > latest.json
