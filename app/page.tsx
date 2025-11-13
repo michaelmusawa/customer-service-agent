@@ -613,11 +613,29 @@ export default function HomePage() {
                                 </div>
                               )}
 
+                              {event.error?.includes("Network Error") && (
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  Tip: Check your internet connection and try
+                                  again.
+                                </div>
+                              )}
+
+                              {event.error?.includes("OCR request failed") && (
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  Tip: Contact your system administrator to
+                                  configure server url
+                                </div>
+                              )}
+
                               {!event.error?.includes("Excel") &&
                                 !event.error?.includes(
                                   "Missing required fields"
                                 ) &&
-                                !event.error?.includes("API key") && (
+                                !event.error?.includes("API key") &&
+                                !event.error?.includes("Network Error") &&
+                                !event.error?.includes(
+                                  "OCR request failed"
+                                ) && (
                                   <ul className="text-red-600 dark:text-red-400 text-sm list-disc pl-5 mt-1 space-y-1">
                                     <li>
                                       Check if the PDF contains required fields

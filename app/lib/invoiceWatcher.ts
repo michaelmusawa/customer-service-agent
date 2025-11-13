@@ -16,6 +16,39 @@ export type ProcessingEvent = {
   timestamp: number;
 };
 
+// Cache to avoid double-processing same file within a short time
+const recentFiles = new Map<string, number>();
+const DUPLICATE_WINDOW = 3000; // ms
+
+function shouldProcess(filePath: string): boolean {
+  const now = Date.now();
+  const last = recentFiles.get(filePath);
+  recentFiles.set(filePath, now);
+  return !last || now - last > DUPLICATE_WINDOW;
+}
+
+// Helper to wait for file stability (optional for large downloads)
+async function waitForFileStable(
+  filePath: string,
+  retries = 5,
+  interval = 500
+): Promise<boolean> {
+  let lastSize = -1;
+  for (let i = 0; i < retries; i++) {
+    try {
+      const { size } = (await invoke("stat_file", { filePath })) as {
+        size: number;
+      };
+      if (size === lastSize) return true;
+      lastSize = size;
+    } catch {
+      // file may not exist yet
+    }
+    await new Promise((r) => setTimeout(r, interval));
+  }
+  return false;
+}
+
 export async function startInvoiceWatcher(
   onEvent?: (event: ProcessingEvent) => void
 ) {
@@ -45,10 +78,20 @@ export async function startInvoiceWatcher(
 
       if (!isNewFile) return;
 
-      for (const p of event.paths.filter(
-        (p) => p.endsWith(".pdf") || p.endsWith(".xlsx")
-      )) {
+      // Only process new PDF/Excel files, ignore temp files
+      const validFiles = event.paths.filter(
+        (p) =>
+          (p.endsWith(".pdf") || p.endsWith(".xlsx")) &&
+          !p.endsWith(".crdownload") &&
+          !p.endsWith(".part") &&
+          !p.endsWith(".tmp")
+      );
+
+      for (const p of validFiles) {
         const fileName = basename(p);
+
+        // Avoid double-triggering (esp. on Windows rename events)
+        if (!shouldProcess(p)) return;
 
         onEvent?.({
           fileName,
@@ -58,6 +101,8 @@ export async function startInvoiceWatcher(
         });
 
         try {
+          await waitForFileStable(p);
+
           let text;
           let rows;
 
