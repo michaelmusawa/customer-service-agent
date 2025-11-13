@@ -107,11 +107,8 @@ export async function startInvoiceWatcher(
           if (typeof err === "object" && err !== null) {
             if ("error" in err && typeof err.error === "string") {
               errorMsg = err.error;
-            } else if (
-              "message" in err &&
-              typeof (err as any).message === "string"
-            ) {
-              errorMsg = (err as any).message;
+            } else if ("message" in err && typeof err.message === "string") {
+              errorMsg = err.message;
             } else {
               errorMsg = "An unexpected error occurred while sending data.";
             }
