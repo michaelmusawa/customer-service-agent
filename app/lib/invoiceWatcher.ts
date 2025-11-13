@@ -64,8 +64,6 @@ export async function startInvoiceWatcher(
           if (p.endsWith(".pdf")) {
             // extract raw text from PDF
             text = await invoke("parse_invoice", { filePath: p });
-
-            console.log("Extracted text:", text);
           } else {
             // extract raw rows from Excel
             rows = await parseExcel(p);
@@ -104,7 +102,28 @@ export async function startInvoiceWatcher(
             title: "Daemon",
             body: "❌ Failed sending to server",
           });
-          const errorMsg = err instanceof Error ? err.message : "Unknown error";
+          let errorMsg: string;
+
+          if (typeof err === "object" && err !== null) {
+            if ("error" in err && typeof err.error === "string") {
+              errorMsg = err.error;
+            } else if (
+              "message" in err &&
+              typeof (err as any).message === "string"
+            ) {
+              errorMsg = (err as any).message;
+            } else {
+              errorMsg = "An unexpected error occurred while sending data.";
+            }
+          } else {
+            errorMsg = String(err);
+          }
+
+          sendNotification({
+            title: "Invoice Agent",
+            body: `❌ ${errorMsg}`,
+          });
+
           onEvent?.({
             fileName,
             fullPath: p,

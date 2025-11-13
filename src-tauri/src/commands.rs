@@ -61,6 +61,7 @@ pub async fn parse_invoice(app: AppHandle<Wry>, file_path: String) -> Result<Str
         if !text.trim().is_empty() {
             return Ok(text);
         }
+       
     }
 
     // 2. Load the API base URL from the store
@@ -74,6 +75,8 @@ pub async fn parse_invoice(app: AppHandle<Wry>, file_path: String) -> Result<Str
     // 3. Construct the full OCR endpoint dynamically
     let ocr_url = format!("{}/ocr/pdf", base_url.trim_end_matches('/'));
 
+    println!("[parse_invoice] Fallback to OCR endpoint: {}", ocr_url);
+
     // 2. Fall back to OCR via FastAPI
     let client = tauri_plugin_http::reqwest::Client::new();
     let file_bytes = std::fs::read(&file_path).map_err(|e| e.to_string())?;
@@ -84,14 +87,36 @@ pub async fn parse_invoice(app: AppHandle<Wry>, file_path: String) -> Result<Str
         .body(file_bytes)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| {
+            let msg = format!("OCR request failed: {}", e);
+            println!("[parse_invoice] {}", msg);
+            msg
+        })?;
+    let status = res.status();
+    let text = res.text().await.map_err(|e| e.to_string())?;
 
-    if res.status().is_success() {
-        let text = res.text().await.map_err(|e| e.to_string())?;
-        let json: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-        if let Some(text) = json.get("text").and_then(|t| t.as_str()) {
-            return Ok(text.to_string());
+    println!("[parse_invoice] OCR response status: {}", status);
+    println!("[parse_invoice] Raw OCR response snippet: {}", &text[..text.len().min(300)]); // log safely
+
+    if status.is_success() {
+        match serde_json::from_str::<serde_json::Value>(&text) {
+            Ok(json) => {
+                if let Some(extracted) = json.get("text").and_then(|t| t.as_str()) {
+                    println!(
+                        "[parse_invoice] Successfully extracted OCR text ({} chars)",
+                        extracted.len()
+                    );
+                    return Ok(extracted.to_string());
+                } else {
+                    println!("[parse_invoice] OCR JSON did not contain 'text' field.");
+                }
+            }
+            Err(e) => {
+                println!("[parse_invoice] Failed to parse OCR JSON: {}", e);
+            }
         }
+    } else {
+        println!("[parse_invoice] OCR returned non-success status: {}", status);
     }
 
     Err("Failed to extract text".into())

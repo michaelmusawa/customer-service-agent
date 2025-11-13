@@ -564,6 +564,7 @@ export default function HomePage() {
                           ? "⚠"
                           : "↻"}
                       </div>
+
                       <div className="flex-1">
                         <div className="text-sm dark:text-gray-300">
                           {event.status === "success"
@@ -575,19 +576,48 @@ export default function HomePage() {
                             : "Processing started..."}
                         </div>
 
+                        {/* Error details + troubleshooting tips */}
                         {event.status === "error" && (
                           <div className="mt-2">
                             <span className="text-red-700 dark:text-red-400 text-sm font-medium">
                               {event.error}
                             </span>
 
-                            {/* Fallback troubleshooting tips if backend didn’t provide a clear error */}
-                            {!event.error ||
-                              (event.error === "Processing failed" && (
-                                <div className="mt-2">
-                                  <div className="text-red-700 dark:text-red-400 text-sm font-medium">
-                                    Troubleshooting:
-                                  </div>
+                            <div className="mt-2">
+                              <div className="text-red-700 dark:text-red-400 text-sm font-medium">
+                                Troubleshooting:
+                              </div>
+
+                              {event.error?.includes("API key") && (
+                                <div className="text-xs text-red-500 mt-1">
+                                  Tip: Go to <strong>Agent Settings</strong> →
+                                  re-enter your credentials.
+                                </div>
+                              )}
+
+                              {event.error?.includes("Excel") && (
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  Tip: Check that the Excel file has the
+                                  required columns.
+                                </div>
+                              )}
+
+                              {event.error?.includes(
+                                "Missing required fields"
+                              ) && (
+                                <div className="text-xs text-yellow-600 mt-1">
+                                  Tip: Check that your invoice or document
+                                  contains all required information: Customer
+                                  Name, Total Amount, Record Number, Service,
+                                  Sub Service, Record Type.
+                                </div>
+                              )}
+
+                              {!event.error?.includes("Excel") &&
+                                !event.error?.includes(
+                                  "Missing required fields"
+                                ) &&
+                                !event.error?.includes("API key") && (
                                   <ul className="text-red-600 dark:text-red-400 text-sm list-disc pl-5 mt-1 space-y-1">
                                     <li>
                                       Check if the PDF contains required fields
@@ -597,8 +627,8 @@ export default function HomePage() {
                                       document
                                     </li>
                                   </ul>
-                                </div>
-                              ))}
+                                )}
+                            </div>
 
                             {event.fullPath && (
                               <button

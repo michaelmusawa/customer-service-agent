@@ -15,7 +15,7 @@ export async function sendToNextRaw(payload: RawPayload) {
 
   if (!apiKey) {
     sendNotification({
-      title: "Daemon",
+      title: "Customer Service Agent",
       body: "❌ No API key or Email configured",
     });
     throw new Error("No API key configured");
@@ -57,10 +57,20 @@ export async function sendToNextRaw(payload: RawPayload) {
 
     return response.data;
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
-      // Let API response bubble up instead of custom messages
-      throw error.response.data;
+    if (axios.isAxiosError(error)) {
+      const msg =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Unknown server error";
+      const code = error.response?.data?.code || "UNKNOWN";
+      throw { ok: false, error: msg, code, status: error.response?.status };
     }
-    throw error;
+
+    throw {
+      ok: false,
+      error: (error as Error).message || "Unexpected error",
+      code: "UNEXPECTED",
+    };
   }
 }
