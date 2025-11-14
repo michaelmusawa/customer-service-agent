@@ -37,11 +37,11 @@ export async function startInvoiceWatcher(
     async (event) => {
       // only care about new files
 
-      // @ts-expect-error TODO: plugin-fs types are inaccurate for 'create'
-      const isNewFile = event.type?.modify?.kind === "any";
+      // const isNewFile = event.type?.modify?.kind === "any";
 
+      // @ts-expect-error TODO: plugin-fs types are inaccurate for 'create'
       // prettier-ignore
-      // const isNewFile = event?.type?.create || event?.type?.create?.kind === "file";
+      const isNewFile = event?.type?.create || event?.type?.create?.kind === "file";
 
       if (!isNewFile) return;
 
@@ -91,12 +91,6 @@ export async function startInvoiceWatcher(
               timestamp: Date.now(),
             });
           }
-
-          try {
-            await renamePath(p, "invoices/processed");
-          } catch {
-            console.error("Failed moving to processed directory");
-          }
         } catch (err) {
           sendNotification({
             title: "Daemon",
@@ -128,11 +122,6 @@ export async function startInvoiceWatcher(
             error: errorMsg,
             timestamp: Date.now(),
           });
-          try {
-            await renamePath(p, "invoices/failed");
-          } catch (err) {
-            console.error("Failed moving to failed directory", err);
-          }
         }
       }
     },
