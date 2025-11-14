@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { watch, BaseDirectory, mkdir } from "@tauri-apps/plugin-fs";
 
 import { basename } from "./pathUtils";
-import { renamePath } from "./utils";
 import { parseExcel } from "./excelUtils";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { sendToNextRaw } from "./actions/sendToNext";
