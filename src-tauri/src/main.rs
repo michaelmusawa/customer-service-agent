@@ -18,7 +18,7 @@ fn main() {
             app.notification()
                 .builder()
                 .title("Customer Service Agent")
-                .body("Application started successfully!")
+                .body("App started successfully!")
                 .show()
                 .unwrap();
     
